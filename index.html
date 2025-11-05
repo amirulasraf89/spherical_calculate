@@ -9,10 +9,11 @@
   fieldset { margin-bottom: 12px; padding:10px; border-radius:8px; }
   input, select { padding:6px; margin:4px 6px 10px 0; }
   label { display:inline-block; width:180px; }
-  .boxed { background:#f9fafc; border:1px solid #ddd; padding:12px; border-radius:8px; }
+  .boxed { background:#f9fafc; border:1px solid #ddd; padding:12px; border-radius:8px; line-height:1.6; }
   button { padding:8px 12px; font-size:15px; margin-right:8px; }
   #canvasBox { text-align:center; margin-top:20px; }
   canvas { border:1px solid #ccc; border-radius:6px; background:white; }
+  h3 { margin-top:40px; }
 </style>
 
 <!-- MathJax untuk paparan formula -->
@@ -26,7 +27,7 @@ window.MathJax = {
 </head>
 <body>
 
-<h2>Visualisasi Sfera & Langkah Kiraan Lengkap \( D(r) \)</h2>
+<h2>Visualisasi Sfera & Langkah Kiraan \( D(r) \) (Paparan Baris)</h2>
 
 <div class="boxed">
   <label>Unit jejari:</label>
@@ -130,25 +131,16 @@ async function calculate(){
   const fourPi=4*Math.PI;
   const eps0=8.8541878128e-12;
 
-  // 1. Cas Titik
   const Qpt = Q;
-
-  // 2. Cas Permukaan
   let Qs1 = 0;
   if (r_eval >= r_s1) Qs1 = rho_s1 * fourPi * r_s1**2;
-
-  // 3. Cas Isi Padu
   let Qv = 0;
   let upper = 0;
   if (r_eval > r_v_in) {
     upper = Math.min(r_eval, r_v_out);
     Qv = (fourPi * rho_v / 3) * (upper**3 - r_v_in**3);
   }
-
-  // 4. Jumlah Cas
   const Qenc = Qpt + Qs1 + Qv;
-
-  // 5. D dan E
   const D = Qenc / (fourPi * r_eval**2);
   const E = D / eps0;
 
@@ -159,38 +151,40 @@ async function calculate(){
   else if (r_eval <= r_v_out) region="Region 3: Dalam kawasan isi padu";
   else region="Region 4: Di luar semua cas";
 
-  // ---- Paparan langkah MathJax ----
+  // ---- Paparan langkah MathJax baris demi baris ----
   let tex = "";
-  tex += "\\underline{1. Diberi:}\\\\[4pt]";
-  tex += "Q = "+num(Q)+"\\,\\text{C},\\; \\rho_{s1} = "+num(rho_s1)+"\\,\\text{C/m}^2,\\; r_{s1} = "+num(r_s1)+"\\,\\text{m}\\\\";
-  tex += "\\rho_v = "+num(rho_v)+"\\,\\text{C/m}^3,\\; r_{v,in} = "+num(r_v_in)+"\\,\\text{m},\\; r_{v,out} = "+num(r_v_out)+"\\,\\text{m}\\\\";
-  tex += "r_{eval} = "+num(r_eval)+"\\,\\text{m}\\\\";
-  tex += "\\textbf{"+region+"}\\\\[10pt]";
 
-  tex += "\\underline{2. Cas Permukaan:}\\\\[4pt]";
-  tex += "Q_{s1} = \\rho_{s1}(4\\pi r_{s1}^2) = ("+num(rho_s1)+")4\\pi("+num(r_s1)+"^2) = "+num(Qs1)+"\\,\\text{C}\\\\[10pt]";
+  tex += "<b>Langkah 1:</b> Data Diberi<br>";
+  tex += "\\( Q = "+num(Q)+"\\,\\text{C},\\; \\rho_{s1} = "+num(rho_s1)+"\\,\\text{C/m}^2,\\; r_{s1} = "+num(r_s1)+"\\,\\text{m} \\)<br>";
+  tex += "\\( \\rho_v = "+num(rho_v)+"\\,\\text{C/m}^3,\\; r_{v,in} = "+num(r_v_in)+"\\,\\text{m},\\; r_{v,out} = "+num(r_v_out)+"\\,\\text{m} \\)<br>";
+  tex += "\\( r_{eval} = "+num(r_eval)+"\\,\\text{m} \\)<br>";
+  tex += "<b>"+region+"</b><br><br>";
 
-  tex += "\\underline{3. Cas Isi Padu:}\\\\[4pt]";
+  tex += "<b>Langkah 2:</b> Cas Permukaan<br>";
+  tex += "\\( Q_{s1} = \\rho_{s1}(4\\pi r_{s1}^2) = ("+num(rho_s1)+")4\\pi("+num(r_s1)+"^2) = "+num(Qs1)+"\\,\\text{C} \\)<br><br>";
+
+  tex += "<b>Langkah 3:</b> Cas Isi Padu (Integrasi)<br>";
   if (Qv === 0) {
-    tex += "\\text{Tiada cas isi padu terkurung kerana } r < r_{v,in}.\\\\[10pt]";
+    tex += "\\( \\text{Tiada cas isi padu terkurung kerana } r < r_{v,in}. \\)<br><br>";
   } else {
-    tex += "Q_v = \\int_{r_{v,in}}^{r} \\rho_v 4\\pi r'^2 dr' = 4\\pi\\rho_v\\int_{"+num(r_v_in)+"}^{"+num(upper)+"} r'^2 dr'\\\\";
-    tex += "= 4\\pi\\rho_v\\left[\\frac{r'^3}{3}\\right]_{"+num(r_v_in)+"}^{"+num(upper)+"} = \\frac{4\\pi\\rho_v}{3}("+num(upper)+"^3 - "+num(r_v_in)+"^3)\\\\";
-    tex += "\\mathbf{Q_v} = "+num(Qv)+"\\,\\text{C}\\\\[10pt]";
+    tex += "\\( Q_v = \\int_{r_{v,in}}^{r} \\rho_v 4\\pi r'^2 dr' \\)<br>";
+    tex += "\\( = 4\\pi\\rho_v\\int_{"+num(r_v_in)+"}^{"+num(upper)+"} r'^2 dr' \\)<br>";
+    tex += "\\( = 4\\pi\\rho_v\\left[\\frac{r'^3}{3}\\right]_{"+num(r_v_in)+"}^{"+num(upper)+"} \\)<br>";
+    tex += "\\( = \\frac{4\\pi\\rho_v}{3}("+num(upper)+"^3 - "+num(r_v_in)+"^3) = "+num(Qv)+"\\,\\text{C} \\)<br><br>";
   }
 
-  tex += "\\underline{4. Jumlah Cas Terkurung:}\\\\[4pt]";
-  tex += "Q_{enc} = Q + Q_{s1} + Q_v = "+num(Qpt)+" + ("+num(Qs1)+") + ("+num(Qv)+") = "+num(Qenc)+"\\,\\text{C}\\\\[10pt]";
+  tex += "<b>Langkah 4:</b> Jumlah Cas Terkurung<br>";
+  tex += "\\( Q_{enc} = Q + Q_{s1} + Q_v = "+num(Qpt)+" + ("+num(Qs1)+") + ("+num(Qv)+") = "+num(Qenc)+"\\,\\text{C} \\)<br><br>";
 
-  tex += "\\underline{5. Ketumpatan Fluks Elektrik:}\\\\[4pt]";
-  tex += "D(r) = \\frac{Q_{enc}}{4\\pi r^2} = \\frac{"+num(Qenc)+"}{4\\pi("+num(r_eval)+"^2)} = "+num(D)+"\\,\\text{C/m}^2\\\\[10pt]";
+  tex += "<b>Langkah 5:</b> Ketumpatan Fluks Elektrik<br>";
+  tex += "\\( D(r) = \\frac{Q_{enc}}{4\\pi r^2} = \\frac{"+num(Qenc)+"}{4\\pi("+num(r_eval)+"^2)} = "+num(D)+"\\,\\text{C/m}^2 \\)<br><br>";
 
-  tex += "\\underline{6. Medan Elektrik:}\\\\[4pt]";
-  tex += "E = \\frac{D}{\\varepsilon_0} = \\frac{"+num(D)+"}{"+num(eps0)+"} = "+num(E)+"\\,\\text{V/m}\\\\[10pt]";
+  tex += "<b>Langkah 6:</b> Medan Elektrik<br>";
+  tex += "\\( E = \\frac{D}{\\varepsilon_0} = \\frac{"+num(D)+"}{"+num(eps0)+"} = "+num(E)+"\\,\\text{V/m} \\)<br><br>";
 
-  tex += "\\text{Maka, } \\boxed{D("+num(r_eval)+") = "+num(D)+"\\,\\text{C/m}^2.}";
+  tex += "<b>Jawapan Akhir:</b> \\( D("+num(r_eval)+") = "+num(D)+"\\,\\text{C/m}^2 \\)";
 
-  document.getElementById('output').innerHTML = "$$"+tex+"$$";
+  document.getElementById('output').innerHTML = tex;
   drawSphere(r_s1, r_v_in, r_v_out, r_eval);
 
   if(window.MathJax) await MathJax.typesetPromise();
