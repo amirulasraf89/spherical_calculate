@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="ms">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Visualisasi Sfera & Jalan Kerja D(r)</title>
+<style>
+  body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial; max-width:1000px; margin:20px auto; padding:16px; }
+  fieldset { margin-bottom: 12px; padding:10px; border-radius:8px; }
+  input, select { padding:6px; margin:4px 6px 10px 0; }
+  label { display:inline-block; width:180px; }
+  .boxed { background:#f9fafc; border:1px solid #ddd; padding:12px; border-radius:8px; }
+  button { padding:8px 12px; font-size:15px; margin-right:8px; }
+  #canvasBox { text-align:center; margin-top:20px; }
+  canvas { border:1px solid #ccc; border-radius:6px; background:white; }
+</style>
+
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+</head>
+<body>
+
+<h2>Visualisasi Sfera & Langkah Kiraan Lengkap \( D(r) \) (Fixed)</h2>
+
+<div class="boxed">
+  <label>Unit radii:</label>
+  <select id="unit"><option value="m">meter</option><option value="cm" selected>centimeter</option></select><br>
+
+  <fieldset><legend>Cas Titik (Pusat)</legend>
+    <label>Q (C):</label><input id="Q" type="text" value="10e-9">
+  </fieldset>
+
+  <fieldset><legend>Cas Permukaan (S1)</legend>
+    <label>ρ<sub>s1</sub> (C/m²):</label><input id="rho_s1" type="text" value="-50e-9"><br>
+    <label>r<sub>s1</sub>:</label><input id="r_s1" type="text" value="3">
+  </fieldset>
+
+  <fieldset><legend>Cas Isi Padu (Volume)</legend>
+    <label>ρ<sub>v</sub> (C/m³):</label><input id="rho_v" type="text" value="30e-9"><br>
+    <label>r<sub>v,in</sub>:</label><input id="r_v_in" type="text" value="4"><br>
+    <label>r<sub>v,out}}:</label><input id="r_v_out" type="text" value="5">
+  </fieldset>
+
+  <label>r (untuk D):</label><input id="r_eval" type="text" value="4.5"><br>
+
+  <button onclick="calculate()">Kira & Lukis</button>
+</div>
+
+<div id="canvasBox">
+  <canvas id="sphereCanvas" width="500" height="500"></canvas>
+</div>
+
+<h3>Langkah Kiraan Matematik</h3>
+<div id="output" class="boxed">Tekan “Kira & Lukis” untuk mula.</div>
+
+<script>
+function toNum(x){const n=Number(x);return isFinite(n)?n:NaN;}
+function convR(v,unit){const n=toNum(v);return unit==='cm'?n/100:n;}
+// Fungsi format num dikekalkan seperti asal (guna notasi saintifik jika perlu)
+function num(x){return (Math.abs(x)<1e-3||Math.abs(x)>1e6)?x.toExponential(3):x.toPrecision(6);}
+
+// Lukisan sfera (2D keratan rentas) - Dikekalkan
+function drawSphere(r_s1, r_v_in, r_v_out, r_eval) {
+  const c = document.getElementById('sphereCanvas');
+  const ctx = c.getContext('2d');
+  ctx.clearRect(0,0,c.width,c.height);
+  const cx=c.width/2, cy=c.height/2;
+  const maxR = Math.max(r_v_out, r_eval, r_s1)*1.3;
+  const scale = (c.width/2 - 40)/maxR;
+
+  // Kawasan isi padu
+  ctx.beginPath();
+  ctx.arc(cx,cy,r_v_out*scale,0,2*Math.PI);
+  ctx.fillStyle="rgba(255,230,150,0.3)";
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(cx,cy,r_v_in*scale,0,2*Math.PI);
+  ctx.fillStyle="white";
+  ctx.fill();
+  ctx.strokeStyle="#ffcc00";
+  ctx.lineWidth=2;
+  ctx.stroke();
+
+  // Permukaan S1
+  ctx.beginPath();
+  ctx.arc(cx,cy,r_s1*scale,0,2*Math.PI);
+  ctx.strokeStyle="orange";
+  ctx.lineWidth=3;
+  ctx.stroke();
+
+  // r_eval
+  ctx.beginPath();
+  ctx.arc(cx,cy,r_eval*scale,0,2*Math.PI);
+  ctx.setLineDash([5,5]);
+  ctx.strokeStyle="blue";
+  ctx.lineWidth=1.5;
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // titik pusat Q
+  ctx.beginPath();
+  ctx.arc(cx,cy,5,0,2*Math.PI);
+  ctx.fillStyle="purple";
+  ctx.fill();
+
+  // label
+  ctx.font="14px Arial";
+  ctx.fillStyle="black";
+  ctx.fillText("Q (cas titik)",cx+10,cy-5);
+  ctx.fillText("ρs permukaan",cx+r_s1*scale+10,cy);
+  ctx.fillText("ρv isi padu",cx+r_v_out*scale/2,cy-20);
+  ctx.fillText("r eval",cx+r_eval*scale+8,cy-8);
+}
+
+// Fungsi pengiraan yang diubahsuai
+async function calculate(){
+  const unit=document.getElementById('unit').value;
+  const Q=toNum(document.getElementById('Q').value);
+  const rho_s1=toNum(document.getElementById('rho_s1').value);
+  const r_s1=convR(document.getElementById('r_s1').value,unit);
+  const rho_v=toNum(document.getElementById('rho_v').value);
+  const r_v_in=convR(document.getElementById('r_v_in').value,unit);
+  const r_v_out=convR(document.getElementById('r_v_out').value,unit);
+  const r_eval=convR(document.getElementById('r_eval').value,unit);
+
+  const fourPi=4*Math.PI;
+  const eps0=8.8541878128e-12;
+
+  // 1. Cas Titik
+  const Qpt = Q;
+
+  // 2. Cas Permukaan
+  let Qs1 = 0;
+  let Qs1_status = "Tidak terkurung ($r_{eval} < r_{s1}$)";
+  if (r_eval >= r_s1) {
+    Qs1 = rho_s1 * fourPi * r_s1**2;
+    Qs1_status = "Terkurung ($r_{eval} \ge r_{s1}$)";
+  }
+
+  // 3. Cas Isi Padu
+  let Qv = 0;
+  let upper = 0;
+  let Qv_status = "Tiada cas isi padu terkurung.";
+  
+  if (r_eval > r_v_in) {
+    upper = Math.min(r_eval, r_v_out);
+    if (upper > r_v_in) {
+      Qv = (fourPi * rho_v / 3) * (upper**3 - r_v_in**3);
+      Qv_status = "Terkurung sebahagian/penuh (dari $r_{v,in}$ hingga " + num(upper) + "\\,\\text{m}).";
+    }
+  }
+
+  // 4. Jumlah Cas Terkurung
+  const Qenc = Qpt + Qs1 + Qv;
+
+  // 5. Ketumpatan Fluks Elektrik
+  const D = Qenc / (fourPi * r_eval**2);
+  const E = D / eps0;
+
+  // JALAN KERJA MATH TERPERINCI (FIXED FOR BETTER LAYOUT)
+  let tex = "";
+  
+  // Bahagian 1: Diberi
+  tex += "\\underline{1. Diberi & Jejari Penilaian:}\\\\[4pt]";
+  tex += "\\text{Q } = "+num(Q)+"\\,\\text{C}\\\\"
+  tex += "\\rho_{s1} = "+num(rho_s1)+"\\,\\text{C/m}^2,\\; r_{s1} = "+num(r_s1)+"\\,\\text{m}\\\\"
+  tex += "\\rho_v = "+num(rho_v)+"\\,\\text{C/m}^3,\\; r_{v,in} = "+num(r_v_in)+"\\,\\text{m},\\; r_{v,out} = "+num(r_v_out)+"\\,\\text{m}\\\\"
+  tex += "\\mathbf{r_{eval}} = "+num(r_eval)+"\\,\\text{m}\\\\[10pt]";
+
+  // Bahagian 2: Cas Titik
+  tex += "\\underline{2. Cas Titik (Pusat):}\\\\[4pt]";
+  tex += "Q_{pt} = Q = "+num(Qpt)+"\\,\\text{C}\\\\[10pt]";
+
+  // Bahagian 3: Cas Permukaan S1
+  tex += "\\underline{3. Cas Permukaan S1 Terkurung ($Q_{s1}$):}\\\\[4pt]";
+  if (r_eval < r_s1) {
+    tex += Qs1_status + "\\implies Q_{s1}=0\\,\text{C.}\\\\[10pt]";
+  } else {
+    tex += "Q_{s1} = \\rho_{s1}(4\\pi r_{s1}^2)\\\\"
+    tex += "Q_{s1} = ("+num(rho_s1)+")4\\pi("+num(r_s1)+"^2)\\\\"
+    tex += "\\mathbf{Q_{s1}} = "+num(Qs1)+"\\,\\text{C}\\\\[10pt]";
+  }
+
+  // Bahagian 4: Cas Isi Padu
+  tex += "\\underline{4. Cas Isi Padu Terkurung ($Q_v$):}\\\\[4pt]";
+  if (Qv === 0) {
+    tex += Qv_status + " \\implies Q_v=0\\,\text{C.}\\\\[10pt]";
+  } else {
+    tex += "\\text{Integrasi dari } r_{v,in} \\text{ ke } r_{upper} = "+num(upper)+"\\,\\text{m}\\\\"
+    tex += "Q_v = \\int_{r_{v,in}}^{r_{upper}} \\rho_v 4\\pi r'^2 dr' = \\frac{4\\pi\\rho_v}{3}(r_{upper}^3 - r_{v,in}^3)\\\\"
+    tex += "Q_v = \\frac{4\\pi("+num(rho_v)+")}{3}("+num(upper)+"^3 - "+num(r_v_in)+"^3)\\\\"
+    tex += "\\mathbf{Q_v} = "+num(Qv)+"\\,\\text{C}\\\\[10pt]";
+  }
+
+  // Bahagian 5: Jumlah Cas Terkurung
+  tex += "\\underline{5. Jumlah Cas Terkurung ($Q_{enc}$):}\\\\[4pt]";
+  tex += "Q_{enc} = Q_{pt} + Q_{s1} + Q_v \\\\";
+  tex += "Q_{enc} = "+num(Qpt)+" + ("+num(Qs1)+") + ("+num(Qv")+") \\\\";
+  tex += "\\mathbf{Q_{enc}} = "+num(Qenc)+"\\,\\text{C}\\\\[10pt]";
+
+  // Bahagian 6: Ketumpatan Fluks Elektrik
+  tex += "\\underline{6. Ketumpatan Fluks Elektrik ($D$):}\\\\[4pt]";
+  tex += "\\text{Hukum Gauss: } D(r) = \\frac{Q_{enc}}{4\\pi r^2}\\\\"
+  tex += "D("+num(r_eval)+") = \\frac{"+num(Qenc)+"}{4\\pi("+num(r_eval)+"^2)}\\\\"
+  tex += "\\mathbf{D("+num(r_eval)+")} = "+num(D)+"\\,\\text{C/m}^2\\\\[10pt]";
+
+  // Bahagian 7: Medan Elektrik
+  tex += "\\underline{7. Medan Elektrik ($E$):}\\\\[4pt]";
+  tex += "E = \\frac{D}{\\varepsilon_0} = \\frac{"+num(D)+"}{"+num(eps0)+"}\\\\"
+  tex += "\\mathbf{E("+num(r_eval)+")} = "+num(E)+"\\,\\text{V/m}\\\\[8pt]";
+
+  document.getElementById('output').innerHTML = "$$"+tex+"$$";
+  drawSphere(r_s1, r_v_in, r_v_out, r_eval);
+
+  if(window.MathJax) await MathJax.typesetPromise();
+}
+</script>
+
+</body>
+</html>
